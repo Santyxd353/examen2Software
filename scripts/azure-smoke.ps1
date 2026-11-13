@@ -38,4 +38,4 @@ if (-not $SkipWebSocket) {
 $checks = 'ClassForge health, Angular deep links and protected API'
 if (-not $SkipWebSocket) { $checks += ', WebSocket handshake' }
 Write-Host "[ok] $checks"
-Write-Host 'Complete authenticated two-user collaboration and Groq checks using the runbook.'
+Write-Host 'Complete authenticated two-user collaboration and assistant checks using the runbook.'

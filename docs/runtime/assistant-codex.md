@@ -53,6 +53,23 @@ Verificaciones realizadas con la versión fijada
 - Lectura real de una foto de pizarra con seis clases, con grounding y bounds.
 - WAV español transcrito por el runtime instalado en la VM.
 
+Verificación del despliegue (12 de noviembre de 2026)
+
+- Backend: 612 tests, 602 aprobados y 10 omitidos; sin fallos ni errores.
+- Frontend: 18 pruebas de caracterización aprobadas y build de producción correcto.
+- Protocolo Whisper: 18 pruebas aprobadas. Modelo local small-q8_0.
+- API pública: ASK, REVIEW, SUMMARY_CURRENT, EDIT, imagen y voz respondieron HTTP 200.
+  Las propuestas conservaron el documento y su revisión, sin ejecutar Apply.
+- Voz: la orden para crear Factura con un atributo id de tipo Long conservó ambos
+  elementos. Se cubrió también la variante «Cree a una clase…» en las regresiones.
+- Health del asistente: texto, imagen y voz disponibles. Sitio, rutas Angular,
+  protección de API y handshake WebSocket comprobados.
+- Artefacto activo: código `5ad9265b41b8f123f5131d27048c2ba4e63310de`, SHA-256
+  `85b567eda59be5f0bda7e4c82bcf14c6f5cb21e8796f97955749b3e2d183fcc9`.
+
+Las respuestas dependen de la cuota y la sesión de Codex autorizada. El chequeo
+de salud comprueba el runtime y la sesión; no consume una inferencia del modelo.
+
 Fuentes oficiales
 
 - [Autenticación](https://learn.chatgpt.com/docs/auth)
