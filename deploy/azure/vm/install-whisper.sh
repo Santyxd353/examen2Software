@@ -6,10 +6,10 @@ umask 027
 # No API key, account, pip package or network access is needed at runtime.
 WHISPER_CPP_COMMIT="d1be6fde11ac6e0407606b4e42fe72d34add8037" # v1.9.5
 MODEL_REVISION="5359861c739e955e79d9a303bcbc70fb988958b1"
-MODEL_SHA256="c577b9a86e7e048a0b7eada054f4dd79a56bbfa911fbdacf900ac5b567cbb7d9"
+MODEL_SHA256="49c8fb02b65e6049d5fa6c04f81f53b867b5ec9540406812c643f177317f779f"
 PREFIX="/opt/classforge/whisper"
 DATA_DIR="/opt/classforge/data/whisper"
-MODEL_NAME="ggml-base-q8_0.bin" # Multilingual; do not use a .en model for Spanish.
+MODEL_NAME="ggml-small-q8_0.bin" # Multilingual; verified Spanish UML type names on the 2-vCPU VM.
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 
 if [[ ${EUID} -ne 0 ]]; then
@@ -123,4 +123,4 @@ text = json.load(open(sys.argv[1], encoding="utf-8")).get("text")
 if not isinstance(text, str) or not text.strip():
     raise SystemExit("Whisper smoke test returned no transcript.")
 PY
-echo "Whisper ready: http://127.0.0.1:8093 (CPU, base-q8_0, es). WAV smoke test passed."
+echo "Whisper ready: http://127.0.0.1:8093 (CPU, small-q8_0, es). WAV smoke test passed."

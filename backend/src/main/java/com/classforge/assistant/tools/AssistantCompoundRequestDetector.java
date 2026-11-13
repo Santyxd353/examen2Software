@@ -15,7 +15,11 @@ import java.util.regex.Pattern;
 public class AssistantCompoundRequestDetector {
 
     private static final Pattern DIACRITICS = Pattern.compile("\\p{M}+");
-    private static final Pattern CREATE_NAMED = Pattern.compile("\\bcrea(?:r)?\\s+(?:una?\\s+)?(?:clase\\s+)?([a-z_][a-z0-9_]*)");
+    // Recognize the ASR form "Cree a una clase" only as a cue; never rewrite names or the request.
+    private static final Pattern CREATE_NAMED = Pattern.compile(
+            "\\b(?:crea(?:r)?\\s+(?:una?\\s+)?(?:clase\\s+)?"
+                    + "|cree\\s+(?:a\\s+)?(?:una?\\s+)?clase\\s+)([a-z_][a-z0-9_]*)"
+    );
 
     public boolean isCompound(String userText) {
         return requiredFamilies(userText).size() >= 2;

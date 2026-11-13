@@ -259,7 +259,7 @@ def create_server(runtime, port=8093):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", default="/opt/classforge/whisper/whisper-server")
-    parser.add_argument("--model", default="/opt/classforge/data/whisper/ggml-base-q8_0.bin")
+    parser.add_argument("--model", default="/opt/classforge/data/whisper/ggml-small-q8_0.bin")
     parser.add_argument("--port", type=int, default=8093)
     parser.add_argument("--upstream-port", type=int, default=8094)
     args = parser.parse_args()

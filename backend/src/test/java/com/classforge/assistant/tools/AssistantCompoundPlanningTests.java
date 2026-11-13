@@ -12,8 +12,11 @@ import com.classforge.project.domain.document.DiagramLayout;
 import com.classforge.project.domain.document.DiagramNodeLayout;
 import com.classforge.project.domain.document.ProjectDocument;
 import com.classforge.project.domain.document.UmlClass;
+import com.classforge.project.domain.document.UmlDataType;
 import com.classforge.project.domain.document.UmlModel;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
@@ -25,6 +28,47 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AssistantCompoundPlanningTests {
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "Cree a una clase factura con un atributo id de tipo Long|factura",
+            "Crea una clase Factura con un atributo id de tipo Long|Factura"
+    })
+    void newClassWithExplicitAttributePreservesLiteralNamesAndLongType(String prompt, String className) {
+        JsonMapper json = JsonMapper.builder().build();
+        var entities = new AssistantEntityReferenceResolver();
+        var hints = new AssistantIntentHintResolver();
+        var normalizer = new AssistantPlanNormalizer();
+        var commands = new UmlAssistantCommandResolver(new ProjectCommandExecutor(), normalizer);
+        AssistantToolCallingGateway gateway = (text, document, catalog, history) -> {
+            AssistantToolName step = catalog.definitions().getFirst().name();
+            var arguments = switch (step) {
+                case ROUTE_REQUEST -> Map.of("steps", List.of("create_class", "add_attributes"));
+                case CREATE_CLASS -> Map.of("name", className);
+                case ADD_ATTRIBUTES -> Map.of("existing_class", className,
+                        "attributes", List.of(Map.of("name", "id", "data_type", "LONG")));
+                default -> throw new AssertionError("Unexpected step: " + step);
+            };
+            return List.of(new AssistantToolInvocation("call-" + step.wireName(), step, json.valueToTree(arguments)));
+        };
+        var planner = new AssistantNativeToolPlanner(
+                new DynamicUmlToolCatalog(hints), gateway,
+                new UmlToolCallResolver(entities, new AssistantLiteralArgumentBinder()),
+                new AssistantToolRouteAdjudicator(hints, entities, new AssistantCompoundRequestDetector()),
+                commands, new AssistantSemanticCompiler(entities), new AssistantPlanGroundingFilter(entities), normalizer);
+        var original = ProjectDocument.empty();
+
+        var plan = planner.plan(prompt, original);
+
+        assertEquals(List.of(AssistantActionType.CREATE_CLASS, AssistantActionType.ADD_ATTRIBUTES),
+                plan.actions().stream().map(action -> action.type()).toList());
+        var preview = commands.preview(original, commands.resolve(plan, original));
+        var created = preview.umlModel().classes().getFirst();
+        assertEquals(className, created.name());
+        assertEquals("id", created.attributes().getFirst().name());
+        assertEquals(UmlDataType.LONG, created.attributes().getFirst().dataType());
+        assertTrue(original.umlModel().classes().isEmpty());
+    }
 
     @Test
     void createThenAddAttributeThenRelateUsesEphemeralPreviewBetweenRounds() throws Exception {

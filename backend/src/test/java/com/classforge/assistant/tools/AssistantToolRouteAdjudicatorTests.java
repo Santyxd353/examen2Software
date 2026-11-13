@@ -14,6 +14,8 @@ import com.classforge.project.domain.document.UmlRelationship;
 import com.classforge.project.domain.document.UmlRelationshipType;
 import com.classforge.project.domain.document.UmlVisibility;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -124,6 +126,17 @@ class AssistantToolRouteAdjudicatorTests {
                 ),
                 route
         );
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "Cree a una clase factura con un atributo id de tipo Long",
+            "Crea una clase Factura con un atributo id de tipo Long"
+    })
+    void explicitAttributeOnNewClassKeepsBothStepsForVoiceAndText(String prompt) {
+        List<AssistantToolName> route = List.of(AssistantToolName.CREATE_CLASS, AssistantToolName.ADD_ATTRIBUTES);
+
+        assertEquals(route, adjudicator.adjudicate(prompt, ProjectDocument.empty(), route));
     }
 
     @Test

@@ -59,7 +59,7 @@ sudo systemctl status classforge-whisper --no-pager
 ```
 
 El instalador fija whisper.cpp **v1.9.5** por commit y verifica el SHA256 del
-modelo multilingue **base-q8_0** (82 MB). Compila para la CPU de esa VM con dos
+modelo multilingue **small-q8_0** (264 MB). Compila para la CPU de esa VM con dos
 hilos; el binario incluye whisper/ggml estaticos, por lo que no depende de los
 archivos temporales de compilacion. Una vez descargado, el runtime funciona
 sin red, cuentas ni claves. Requiere Python 3.12 de Ubuntu; no instala paquetes
@@ -76,7 +76,11 @@ una inferencia simultanea recibe HTTP 429. La carga tiene un plazo de tres
 segundos y la inferencia de cuarenta, dentro de los 45 segundos del gateway.
 Si la inferencia vence, termina el proceso C++ y systemd reinicia el servicio,
 evitando dejar trabajo en cola. Usa ordenes breves de 5 a 15 segundos; la
-latencia real depende de la CPU y debe medirse antes de la demo.
+latencia real depende de la CPU y debe medirse antes de la demo. En la VM de
+dos vCPU, la orden de prueba de 4.18 segundos «Crea una clase Factura con un
+atributo id de tipo Long» se transcribio correctamente en 5.61 segundos,
+con un pico de memoria de 564 MiB. El modelo anterior `base-q8_0` confundia
+`Long` con `Lone` en esa grabacion. El limite del servicio sigue en 1 GiB.
 
 Los ejecutables viven en `/opt/classforge/whisper`; el modelo y un WAV de
 prueba publico viven en `/opt/classforge/data/whisper`. Son archivos de root
@@ -104,4 +108,4 @@ bash -n deploy/azure/vm/install-whisper.sh
 
 Referencias primarias: [whisper.cpp v1.9.5](https://github.com/ggml-org/whisper.cpp/releases/tag/v1.9.5),
 [servidor y protocolo](https://github.com/ggml-org/whisper.cpp/tree/v1.9.5/examples/server),
-[modelo y SHA256](https://huggingface.co/ggerganov/whisper.cpp/blob/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base-q8_0.bin).
+[modelo y SHA256](https://huggingface.co/ggerganov/whisper.cpp/blob/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-small-q8_0.bin).
