@@ -32,9 +32,10 @@ final class GeneratedAssistantGatewayRenderer {
                             @Value("${app.assistant.groq.text-model:openai/gpt-oss-120b}") String model) {
                         this.json = json;
                         this.groq = groq;
-                        this.model = model;
+                        this.model = groq.textModel(model);
                     }
                     public boolean isConfigured() { return groq.isConfigured(); }
+                    public String providerName() { return groq.providerName(); }
 
                     public RouteDecision route(String text) {
                         Map<String, Object> props = new LinkedHashMap<>();
@@ -54,7 +55,7 @@ final class GeneratedAssistantGatewayRenderer {
                             GeneratedAssistantMetadata.entityByCode(entity);
                             return new RouteDecision(intent, entity);
                         } catch (RuntimeException exception) {
-                            throw new IllegalArgumentException("Groq devolvio una ruta de datos desconocida.", exception);
+                            throw new IllegalArgumentException("El proveedor de IA devolvio una ruta de datos desconocida.", exception);
                         }
                     }
 
@@ -158,16 +159,16 @@ final class GeneratedAssistantGatewayRenderer {
                             request.put("tools", List.of(Map.of("type", "function", "function", function)));
                             JsonNode root = groq.chat(request);
                             JsonNode calls = root.path("choices").path(0).path("message").path("tool_calls");
-                            if (!calls.isArray() || calls.size() != 1) throw new IllegalStateException("Groq debe devolver una sola tool_call.");
+                            if (!calls.isArray() || calls.size() != 1) throw new IllegalStateException("El proveedor de IA debe devolver una sola tool_call.");
                             JsonNode fn = calls.path(0).path("function");
                             if (!"function".equals(calls.path(0).path("type").asString()) || !toolName.equals(fn.path("name").asString()))
-                                throw new IllegalStateException("Groq no uso la herramienta de datos esperada.");
+                                throw new IllegalStateException("El proveedor de IA no uso la herramienta de datos esperada.");
                             JsonNode raw = fn.get("arguments");
                             JsonNode args = raw != null && raw.isTextual() ? json.readTree(raw.asString()) : raw;
-                            if (args == null || !args.isObject()) throw new IllegalStateException("Groq no produjo argumentos validos.");
+                            if (args == null || !args.isObject()) throw new IllegalStateException("El proveedor de IA no produjo argumentos validos.");
                             return args;
                         } catch (GeneratedAssistantGroqClient.ProviderException exception) { throw exception; }
-                        catch (Exception exception) { throw new IllegalStateException("Groq no devolvio una herramienta de datos valida."); }
+                        catch (Exception exception) { throw new IllegalStateException("El proveedor de IA no devolvio una herramienta de datos valida."); }
                     }
 
                 }
@@ -187,6 +188,8 @@ final class GeneratedAssistantGatewayRenderer {
                     public static final int MAX_AUDIO_BYTES = 4 * 1024 * 1024;
                     private final GeneratedAssistantGroqClient groq;
                     public GeneratedAssistantWhisperGateway(GeneratedAssistantGroqClient groq) { this.groq = groq; }
+                    public boolean isConfigured() { return groq.isVoiceConfigured(); }
+                    public String providerName() { return groq.speechProviderName(); }
 
                     public String transcribe(MultipartFile audio) {
                         if (audio == null || audio.isEmpty()) throw new IllegalArgumentException("No se recibio audio.");
@@ -195,12 +198,12 @@ final class GeneratedAssistantGatewayRenderer {
                             byte[] bytes = audio.getBytes(); validateWav(bytes);
                             JsonNode root = groq.transcribe(bytes, audio.getOriginalFilename());
                             String transcript = root.path("text").asString().replaceAll("\\\\s+", " ").trim();
-                            if (transcript.isBlank()) throw new IllegalArgumentException("Groq Whisper no detecto voz suficiente.");
+                            if (transcript.isBlank()) throw new IllegalArgumentException("Whisper no detecto voz suficiente.");
                             if (transcript.length() > 1000) throw new IllegalArgumentException("La transcripcion supera 1000 caracteres.");
                             return transcript;
                         } catch (GeneratedAssistantGroqClient.ProviderException exception) { throw exception; }
                         catch (IllegalArgumentException exception) { throw exception; }
-                        catch (Exception exception) { throw new IllegalStateException("No se pudo transcribir el audio con Groq."); }
+                        catch (Exception exception) { throw new IllegalStateException("No se pudo transcribir el audio."); }
                     }
                     private void validateWav(byte[] bytes) {
                         if (bytes == null || bytes.length < 44 || bytes[0] != 'R' || bytes[1] != 'I' || bytes[2] != 'F' || bytes[3] != 'F'
@@ -215,6 +218,9 @@ final class GeneratedAssistantGatewayRenderer {
         return template("""
                 package __PACKAGE__;
 
+                import __PACKAGE__.runtime.codex.CodexCompletionClient;
+                import __PACKAGE__.runtime.codex.CodexApiException;
+                import __PACKAGE__.runtime.WhisperCppSpeechToTextGateway;
                 import java.io.ByteArrayOutputStream;
                 import java.net.URI;
                 import java.net.http.HttpClient;
@@ -229,12 +235,13 @@ final class GeneratedAssistantGatewayRenderer {
                 import java.util.UUID;
                 import java.util.concurrent.CompletableFuture;
                 import java.util.concurrent.TimeUnit;
+                import org.springframework.beans.factory.annotation.Autowired;
                 import org.springframework.beans.factory.annotation.Value;
                 import org.springframework.stereotype.Component;
                 import tools.jackson.databind.JsonNode;
                 import tools.jackson.databind.json.JsonMapper;
 
-                /** Groq credentials stay in this Spring backend, never in generated clients. */
+                /** Backend-only provider facade; the legacy constructor retains explicit Groq compatibility. */
                 @Component
                 public class GeneratedAssistantGroqClient {
                     private final JsonMapper json;
@@ -244,6 +251,34 @@ final class GeneratedAssistantGatewayRenderer {
                     private final String speechModel;
                     private final String language;
                     private final Duration timeout;
+                    private CodexCompletionClient codex;
+                    private WhisperCppSpeechToTextGateway whisper;
+                    private String provider = "groq", speechProvider = "groq", codexModel, whisperUrl;
+
+                    @Autowired
+                    public GeneratedAssistantGroqClient(JsonMapper json,
+                            @Value("${app.assistant.text.provider:codex}") String provider,
+                            @Value("${app.assistant.voice.provider:whisper-cpp}") String speechProvider,
+                            @Value("${app.assistant.codex.executable:codex}") String executable,
+                            @Value("${app.assistant.codex.home:}") String home,
+                            @Value("${app.assistant.codex.model:gpt-6.1-sol}") String model,
+                            @Value("${app.assistant.codex.request-timeout-millis:90000}") long codexTimeout,
+                            @Value("${app.assistant.whisper-url:http://127.0.0.1:8093}") String whisperUrl,
+                            @Value("${app.assistant.whisper-language:es}") String whisperLanguage,
+                            @Value("${app.assistant.groq.base-url:https://api.groq.com/openai/v1}") String url,
+                            @Value("${app.assistant.groq.api-key:}") String apiKey,
+                            @Value("${app.assistant.groq.speech-model:whisper-large-v3-turbo}") String speechModel,
+                            @Value("${app.assistant.groq.language:es}") String language,
+                            @Value("${app.assistant.groq.request-timeout-millis:90000}") long timeoutMillis) {
+                        this(json, url, apiKey, speechModel, language, timeoutMillis);
+                        if (!java.util.Set.of("codex", "groq").contains(provider)
+                                || !java.util.Set.of("whisper-cpp", "groq").contains(speechProvider))
+                            throw new IllegalArgumentException("Proveedor del asistente no admitido.");
+                        this.provider = provider; this.speechProvider = speechProvider;
+                        this.codexModel = model; this.whisperUrl = whisperUrl.replaceAll("/+$", "");
+                        this.codex = new CodexCompletionClient(json, executable, home, model, codexTimeout);
+                        this.whisper = new WhisperCppSpeechToTextGateway(json, whisperUrl, whisperLanguage);
+                    }
 
                     public GeneratedAssistantGroqClient(JsonMapper json,
                             @Value("${app.assistant.groq.base-url:https://api.groq.com/openai/v1}") String url,
@@ -260,9 +295,28 @@ final class GeneratedAssistantGatewayRenderer {
                         this.http = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(Math.min(10000, Math.max(1, timeoutMillis)))).build();
                     }
 
-                    public boolean isConfigured() { return !apiKey.isBlank(); }
+                    public String providerName() { return provider; }
+                    public String speechProviderName() { return speechProvider; }
+                    public String textModel(String legacyModel) { return "codex".equals(provider) ? codexModel : legacyModel; }
+                    public boolean isConfigured() { return "codex".equals(provider) ? codex.probe("codex-text").available() : !apiKey.isBlank(); }
+                    public boolean isVoiceConfigured() {
+                        if ("groq".equals(speechProvider)) return !apiKey.isBlank();
+                        CompletableFuture<HttpResponse<Void>> pending = null;
+                        try {
+                            var request = HttpRequest.newBuilder(URI.create(whisperUrl + "/health")).timeout(Duration.ofSeconds(2)).GET().build();
+                            pending = http.sendAsync(request, HttpResponse.BodyHandlers.discarding());
+                            int status = pending.get(2, TimeUnit.SECONDS).statusCode();
+                            return status >= 200 && status < 300;
+                        } catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); return false; }
+                        catch (Exception unavailable) { return false; }
+                        finally { if (pending != null && !pending.isDone()) pending.cancel(true); }
+                    }
 
                     public JsonNode chat(Map<String, Object> payload) {
+                        if ("codex".equals(provider)) {
+                            try { return codex.chat(payload); }
+                            catch (CodexApiException failure) { throw new ProviderException(failure.statusCode(), failure.retryAfterSeconds(), failure.getMessage()); }
+                        }
                         requireConfigured();
                         try {
                             return send("/chat/completions", "application/json", json.writeValueAsBytes(payload));
@@ -271,6 +325,10 @@ final class GeneratedAssistantGatewayRenderer {
                     }
 
                     public JsonNode transcribe(byte[] audio, String filename) {
+                        if ("whisper-cpp".equals(speechProvider)) {
+                            try { return json.valueToTree(Map.of("text", whisper.transcribe(audio, filename))); }
+                            catch (RuntimeException failure) { throw new ProviderException(503, 0, "No se pudo transcribir el audio con Whisper local."); }
+                        }
                         requireConfigured();
                         try {
                             String boundary = "ClassForgeGroq" + UUID.randomUUID().toString().replace("-", "");
@@ -315,7 +373,7 @@ final class GeneratedAssistantGatewayRenderer {
                     }
 
                     private void requireConfigured() {
-                        if (!isConfigured()) throw new ProviderException(503, 0, "Configura GROQ_API_KEY en el servidor para usar el asistente.");
+                        if (apiKey.isBlank()) throw new ProviderException(503, 0, "Configura GROQ_API_KEY en el servidor para usar el asistente.");
                     }
                     private long retryAfter(String value) {
                         try { return Math.max(0, Long.parseLong(value.trim())); }

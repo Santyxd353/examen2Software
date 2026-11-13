@@ -35,9 +35,14 @@ classforge:
       max-context-chars: ${CLASSFORGE_ASSISTANT_CONVERSATION_MAX_CONTEXT_CHARS:18000}
       max-completion-tokens: ${CLASSFORGE_ASSISTANT_CONVERSATION_MAX_TOKENS:2048}
     text:
-      provider: groq
+      provider: ${CLASSFORGE_ASSISTANT_TEXT_PROVIDER:codex}
     voice:
-      provider: groq
+      provider: ${CLASSFORGE_ASSISTANT_VOICE_PROVIDER:whisper-cpp}
+    codex:
+      executable: ${CLASSFORGE_CODEX_EXECUTABLE:codex}
+      home: ${CLASSFORGE_CODEX_HOME:}
+      model: ${CLASSFORGE_CODEX_MODEL:gpt-6.1-sol}
+      request-timeout-millis: ${CLASSFORGE_CODEX_TIMEOUT_MILLIS:90000}
     groq:
       api-key: ${GROQ_API_KEY:}
       base-url: ${GROQ_BASE_URL:https://api.groq.com/openai/v1}
@@ -48,7 +53,7 @@ classforge:
       request-timeout-millis: ${GROQ_REQUEST_TIMEOUT_MILLIS:90000}
       tool-max-completion-tokens: ${GROQ_TOOL_MAX_COMPLETION_TOKENS:2048}
     vision:
-      provider: groq
+      provider: ${CLASSFORGE_ASSISTANT_VISION_PROVIDER:codex}
       request-timeout-seconds: ${CLASSFORGE_ASSISTANT_VISION_TIMEOUT_SECONDS:180}
       max-completion-tokens: ${CLASSFORGE_ASSISTANT_VISION_MAX_TOKENS:3200}
       dense-two-pass-enabled: ${CLASSFORGE_ASSISTANT_VISION_TWO_PASS:false}

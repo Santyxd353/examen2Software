@@ -1,5 +1,8 @@
 # ClassForge: Groq como proveedor único
 
+Esta guía corresponde a la configuración anterior. El repositorio examen2Software
+usa ahora [GPT con Codex y Whisper local](assistant-codex.md) por defecto.
+
 Actualización: 8 de noviembre de 2026. Se integraron las partes A y B sobre
 `e293845` (MongoDB, actividad, sesiones, notificaciones y asistente compartido).
 

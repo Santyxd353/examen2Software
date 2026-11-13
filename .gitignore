@@ -61,3 +61,7 @@ android/local.properties
 android/**/build/
 *.keystore
 *.jks
+
+# Local speech-runtime test bytecode
+__pycache__/
+*.pyc

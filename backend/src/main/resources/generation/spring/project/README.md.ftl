@@ -40,17 +40,19 @@ Validate it with `flutter analyze`, `flutter test` and `flutter build apk --debu
 
 ## Assistant: chat and voice
 
-The generated Spring backend exposes `/api/assistant/plan`, `/api/assistant/voice` and `/api/assistant/apply`. Angular and Flutter only call these Spring endpoints. Spring uses **Groq only**, with `https://api.groq.com/openai/v1`, `openai/gpt-oss-120b` for data tools and `whisper-large-v3-turbo` for audio transcription. No additional AI server is required.
+The generated Spring backend exposes `/api/assistant/plan`, `/api/assistant/voice` and `/api/assistant/apply`. Angular and Flutter only call these Spring endpoints. The default text provider is **Codex CLI with a private ChatGPT session**, using `gpt-6.1-sol`. A local Whisper service transcribes WAV audio before it reaches the same planner. No provider API key is needed for this default configuration.
 
 Text and Whisper transcripts converge on the same native-tool planner. Read operations execute immediately. CREATE, UPDATE, relation changes and DELETE return a sanitized preview plus an opaque, short-lived token; only `/api/assistant/apply` executes that pending mutation. Sensitive values such as passwords are masked in previews.
 
-Set `GROQ_API_KEY` in the Spring server environment before using the assistant. Never place it in Angular/Flutter configuration, a committed file or this ZIP. An unconfigured application still starts; assistant calls report that server configuration is missing. The generated backend stores no key value in source files.
+Install the official Codex CLI `0.167.2` on the backend host. Set `CODEX_EXECUTABLE` to its executable and `CODEX_HOME` to an operator-managed private directory with an authorized ChatGPT login. Authenticate that private home with the official CLI under the backend service account. Keep the session outside the ZIP, repository, Angular and Flutter. An unconfigured application still starts and reports unavailable capabilities.
 
-Runtime overrides are available through `GROQ_BASE_URL`, `GROQ_TEXT_MODEL`, `GROQ_SPEECH_MODEL`, `GROQ_LANGUAGE` and `GROQ_REQUEST_TIMEOUT_MILLIS`. Select a text model supporting function calling and a speech model supporting transcription. `APP_API_BASE_URL` must point to this generated Spring API when it does not run on port 8080.
+The allowed runtime settings are `ASSISTANT_TEXT_PROVIDER`, `ASSISTANT_VOICE_PROVIDER`, `CODEX_EXECUTABLE`, `CODEX_HOME`, `CODEX_MODEL`, `CODEX_REQUEST_TIMEOUT_MILLIS`, `WHISPER_URL` and `WHISPER_LANGUAGE`. Whisper defaults to `http://127.0.0.1:8093` and must expose `GET /health` plus multipart `POST /inference` returning `{"text":"transcript"}`. `APP_API_BASE_URL` must point to this generated Spring API when it does not run on port 8080.
 
-Groq free-plan quotas apply to the organization and are not unlimited production capacity. On HTTP 429 the backend returns a sanitized error with `Retry-After` and `retryAfterSeconds`; wait before manually retrying. There is no automatic provider retry, paid fallback or automatic execution of provider tools. Upstream provider authentication errors are reported as backend availability errors, so they do not invalidate your application's user session.
+Each Codex request has an isolated temporary directory, a bounded deadline and structured output. Its process receives an explicit environment allowlist with the private `CODEX_HOME`; database credentials, application JWT secrets and API keys are not inherited. Shell, file editing, web search, plugins and MCP tools are disabled. ChatGPT/Codex account limits apply. On HTTP 429 the backend returns a sanitized error with `Retry-After` and `retryAfterSeconds`; retry manually. Provider authentication errors remain backend availability errors and do not invalidate the application's user JWT.
 
-Provider reference: https://console.groq.com/docs/tool-use/overview and https://console.groq.com/docs/speech-to-text .
+For explicit legacy Groq mode set `ASSISTANT_TEXT_PROVIDER=groq`, `ASSISTANT_VOICE_PROVIDER=groq` and server-only `GROQ_API_KEY`. Its optional settings remain `GROQ_BASE_URL`, `GROQ_TEXT_MODEL`, `GROQ_SPEECH_MODEL`, `GROQ_LANGUAGE` and `GROQ_REQUEST_TIMEOUT_MILLIS`. Never put a provider credential in generated clients. `/api/assistant/capabilities` reports the selected text/speech providers and their availability separately.
+
+Provider references: https://learn.chatgpt.com/docs/auth and https://learn.chatgpt.com/docs/non-interactive-mode .
 </#if><#if api.authEnabled()>## Authentication
 
 Authentication is enabled. `/api/auth/login` accepts `username` and `password`. `/api/auth/bootstrap` is a one-time public bootstrap endpoint that only works while the selected authentication table is empty; it accepts the generated `${api.authEntity().className}Request` body, hashes the selected password field with BCrypt and returns a JWT.

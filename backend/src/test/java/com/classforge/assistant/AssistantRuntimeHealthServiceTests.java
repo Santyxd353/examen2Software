@@ -16,6 +16,38 @@ import static org.mockito.Mockito.when;
 class AssistantRuntimeHealthServiceTests {
 
     @Test
+    void codexReadinessUsesItsSessionAndKeepsVoiceDependentOnLocalTranscription() {
+        ProjectService projectService = mock(ProjectService.class);
+        AssistantRuntimeProbe probe = mock(AssistantRuntimeProbe.class);
+        AssistantVisionRuntimeProbe visionProbe = mock(AssistantVisionRuntimeProbe.class);
+        var codex = mock(com.classforge.assistant.codex.CodexCompletionClient.class);
+        when(codex.probe("codex-text")).thenReturn(ready("codex-text"));
+        when(codex.probe("codex-vision")).thenReturn(ready("codex-vision"));
+        when(probe.probe("whisper.cpp", "whisper")).thenReturn(down("whisper.cpp"));
+        var service = service(projectService, probe, visionProbe,
+                "codex", "codex", "llama", "whisper", "vision", "unused");
+        service.configureCodex(codex);
+
+        var health = service.health(UUID.randomUUID(), UUID.randomUUID());
+
+        assertTrue(health.readyForText());
+        assertTrue(health.readyForImage());
+        assertFalse(health.readyForVoice());
+        verify(probe, never()).probe("llama.cpp", "llama");
+        verify(visionProbe, never()).probe("vision", "unused");
+    }
+
+    @Test
+    void missingCodexSessionDoesNotReportALegacyProviderAsReady() {
+        var service = service(mock(ProjectService.class), mock(AssistantRuntimeProbe.class),
+                mock(AssistantVisionRuntimeProbe.class), "codex", "codex", "llama", "whisper", "vision", "unused");
+        var health = service.health(UUID.randomUUID(), UUID.randomUUID());
+        assertFalse(health.readyForText());
+        assertFalse(health.readyForImage());
+        assertEquals("NOT_CONFIGURED", health.llama().state());
+    }
+
+    @Test
     void textVoiceAndImageHaveIndependentReadinessRules() {
         ProjectService projectService = mock(ProjectService.class);
         AssistantRuntimeProbe probe = mock(AssistantRuntimeProbe.class);

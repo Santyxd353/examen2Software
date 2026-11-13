@@ -65,6 +65,15 @@ tasks.register('migrateLegacyDatabase', JavaExec) {
 }
 
 tasks.named('processResources') {
+    // Export the same bounded transport as source; only these Java files enter generated projects.
+    from('src/main/java') {
+        include 'com/classforge/assistant/codex/*.java'
+        include 'com/classforge/assistant/llm/AssistantChatClient.java'
+        include 'com/classforge/assistant/AssistantRuntimeStatus.java'
+        include 'com/classforge/assistant/SpeechToTextGateway.java'
+        include 'com/classforge/assistant/WhisperCppSpeechToTextGateway.java'
+        into 'generation/spring/assistant-runtime'
+    }
     from('gradle/wrapper/gradle-wrapper.jar') {
         into 'generation/spring/static/gradle/wrapper'
     }

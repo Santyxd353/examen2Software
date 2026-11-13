@@ -36,12 +36,15 @@ final class GeneratedAssistantApplicationRenderer {
 
                     public PlanResponse plan(String text, String authorization) { return planText(text, authorization, "TEXT"); }
                     public boolean isConfigured() { return llama.isConfigured(); }
+                    public boolean isVoiceConfigured() { return llama.isConfigured() && whisper.isConfigured(); }
+                    public String providerName() { return llama.providerName(); }
+                    public String speechProviderName() { return whisper.providerName(); }
                     public PlanResponse voice(MultipartFile audio, String authorization) {
                         String transcript = whisper.transcribe(audio);
                         try {
                             return planText(transcript, authorization, "VOICE");
                         } catch (IllegalArgumentException exception) {
-                            throw new IllegalArgumentException("Groq Whisper entendio: \\\"" + abbreviate(transcript, 220) + "\\\". "
+                            throw new IllegalArgumentException("Whisper entendio: \\\"" + abbreviate(transcript, 220) + "\\\". "
                                     + (exception.getMessage() == null ? "No se pudo planificar la instruccion." : exception.getMessage()), exception);
                         }
                     }
@@ -150,7 +153,9 @@ final class GeneratedAssistantApplicationRenderer {
 
                     @GetMapping("/capabilities")
                     public Map<String, Object> capabilities() {
-                        return Map.of("provider", "groq", "text", service.isConfigured(), "voice", service.isConfigured(), "intents", java.util.Arrays.stream(Intent.values()).map(Enum::name).toList());
+                        return Map.of("provider", service.providerName(), "speechProvider", service.speechProviderName(),
+                                "text", service.isConfigured(), "voice", service.isVoiceConfigured(),
+                                "intents", java.util.Arrays.stream(Intent.values()).map(Enum::name).toList());
                     }
 
                     @ExceptionHandler(IllegalArgumentException.class)
@@ -162,7 +167,7 @@ final class GeneratedAssistantApplicationRenderer {
                     @ExceptionHandler(IllegalStateException.class)
                     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
                     public Map<String, String> unavailable(IllegalStateException exception) {
-                        return Map.of("error", "ASSISTANT_RUNTIME_UNAVAILABLE", "message", "No se pudo completar la solicitud del asistente Groq.");
+                        return Map.of("error", "ASSISTANT_RUNTIME_UNAVAILABLE", "message", "No se pudo completar la solicitud del asistente.");
                     }
 
                     @ExceptionHandler(GeneratedAssistantGroqClient.ProviderException.class)

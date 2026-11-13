@@ -153,7 +153,7 @@ export class ProjectAssistantStore {
         this.publish();
         if (this.conversation.retry()) {
           this.error.set(error.status === 429
-            ? `Se alcanzó la cuota de Groq.${error.error?.retryAfterSeconds ? ` Espera ${error.error.retryAfterSeconds} segundos` : ' Espera un momento'} y reintenta la misma solicitud.`
+            ? `Se alcanzó un límite de ${error.error?.error === 'CODEX_RATE_LIMIT' ? 'Codex' : 'la IA'}.${error.error?.retryAfterSeconds ? ` Espera ${error.error.retryAfterSeconds} segundos` : ' Revisa el uso de la cuenta'} y reintenta la misma solicitud.`
             : error.status === 409
             ? 'La solicitud sigue en proceso. Puedes recuperar o reintentar la misma solicitud.'
             : 'No se obtuvo una respuesta. Tu pregunta se conserva; puedes reintentar sin duplicarla.');

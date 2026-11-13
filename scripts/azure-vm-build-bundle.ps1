@@ -28,7 +28,8 @@ try {
     [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($bundle,$artifactPath,'app.jar',[IO.Compression.CompressionLevel]::Optimal) | Out-Null
     [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($bundle,$hashPath,'app.jar.sha256',[IO.Compression.CompressionLevel]::Optimal) | Out-Null
     foreach ($name in @('install.sh','enable-https.sh','check-environment.sh','classforge.service',
-            'nginx-bootstrap.conf','nginx-https.conf','classforge.env.example')) {
+            'nginx-bootstrap.conf','nginx-https.conf','classforge.env.example',
+            'install-codex.sh','install-whisper.sh','whisper-local.py','classforge-whisper.service')) {
         $sourcePath = Join-Path $repoRoot "deploy/azure/vm/$name"
         [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($bundle,$sourcePath,$name,[IO.Compression.CompressionLevel]::Optimal) | Out-Null
     }

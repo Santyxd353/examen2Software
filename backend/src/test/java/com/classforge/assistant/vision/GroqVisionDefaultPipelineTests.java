@@ -22,6 +22,7 @@ import static org.mockito.Mockito.*;
 /** Production defaults must fit one Groq inference even for diagrams with several classes. */
 class GroqVisionDefaultPipelineTests {
     private final ApplicationContextRunner runner = new ApplicationContextRunner()
+            .withPropertyValues("classforge.assistant.vision.provider=groq")
             .withInitializer(context -> {
                 try {
                     new YamlPropertySourceLoader().load("production-defaults",

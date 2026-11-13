@@ -20,4 +20,4 @@ classforge:
       allowed-origin-patterns: ${CLASSFORGE_WEBSOCKET_ALLOWED_ORIGINS}
   assistant:
     groq:
-      api-key: ${GROQ_API_KEY}
+      api-key: ${GROQ_API_KEY:}

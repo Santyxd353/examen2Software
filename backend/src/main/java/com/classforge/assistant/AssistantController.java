@@ -120,8 +120,8 @@ public class AssistantController {
     public org.springframework.http.ResponseEntity<Map<String, Object>> handle(
             AssistantPlanningException exception
     ) {
-        var groq = com.classforge.assistant.groq.GroqErrorResponses.from(exception);
-        if (groq != null) return groq;
+        var providerError = AssistantProviderErrorResponses.from(exception);
+        if (providerError != null) return providerError;
         Map<String, Object> response =
                 new LinkedHashMap<>();
 

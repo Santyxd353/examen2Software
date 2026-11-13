@@ -1,5 +1,6 @@
 package com.classforge.assistant.groq;
 
+import com.classforge.assistant.llm.AssistantChatClient;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.*;
 import tools.jackson.databind.json.JsonMapper;
@@ -43,6 +44,17 @@ class GroqClientTests {
         assertEquals("Bearer test-only-secret", authorization.get());
         assertFalse(body.get().contains("test-only-secret"));
         assertEquals("Respuesta", result.get("choices").get(0).get("message").get("content").asString());
+    }
+
+    @Test void sharedChatContractRetainsAuthenticatedGroqTransport() {
+        reply("chat/completions", 200, "{\"choices\":[{\"message\":{\"content\":\"Respuesta\"}}]}", null);
+        AssistantChatClient client = assertInstanceOf(AssistantChatClient.class,
+                new GroqClient(json, url, "test-only-secret", 1000));
+
+        var result = client.chat(Map.of("model", "openai/gpt-oss-120b", "messages", java.util.List.of()));
+
+        assertEquals("Respuesta", result.get("choices").get(0).get("message").get("content").asString());
+        assertEquals("Bearer test-only-secret", authorization.get());
     }
 
     @Test void noKeyFailsBeforeNetworkAndDoesNotPretendToBeConfigured() {

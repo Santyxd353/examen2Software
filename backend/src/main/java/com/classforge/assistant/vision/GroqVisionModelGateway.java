@@ -33,6 +33,6 @@ public class GroqVisionModelGateway extends LlamaCppVisionModelGateway {
 
     @Override
     protected JsonNode requestCompletion(Map<String, Object> payload, String passName) {
-        return GroqVisionCompletion.request(client, payload);
+        return OpenAiVisionCompletion.request(client, payload);
     }
 }

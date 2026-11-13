@@ -9,12 +9,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-/** Generates the CU-19 Groq natural-language/voice assistant inside exported Spring projects. */
+/** Generates the CU-19 Codex and local Whisper assistant inside exported Spring projects. */
 public final class GeneratedAssistantRenderer {
     private final GeneratedAssistantMetadataRenderer metadata = new GeneratedAssistantMetadataRenderer();
     private final GeneratedAssistantGatewayRenderer gateways = new GeneratedAssistantGatewayRenderer();
     private final GeneratedAssistantExecutionRenderer execution = new GeneratedAssistantExecutionRenderer();
     private final GeneratedAssistantApplicationRenderer application = new GeneratedAssistantApplicationRenderer();
+    private final GeneratedAssistantRuntimeRenderer runtime = new GeneratedAssistantRuntimeRenderer();
 
     public List<GeneratedFile> render(SpringGenerationModel model, DomainManifestPlan manifest) {
         Objects.requireNonNull(model, "model is required");
@@ -30,6 +31,7 @@ public final class GeneratedAssistantRenderer {
         add(files, path + "GeneratedAssistantHttpExecutor.java", execution.executor(pkg));
         add(files, path + "GeneratedAssistantService.java", application.service(pkg));
         add(files, path + "GeneratedAssistantController.java", application.controller(pkg));
+        files.addAll(runtime.render(pkg));
         return List.copyOf(files);
     }
 

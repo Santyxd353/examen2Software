@@ -23,6 +23,7 @@ public class AssistantRuntimeHealthService {
     private final String bedrockTextModel;
     private final String bedrockVisionModel;
     private com.classforge.assistant.groq.GroqHealthProbe groqHealth;
+    private com.classforge.assistant.codex.CodexCompletionClient codexClient;
     private String voiceProvider = "whisper-cpp";
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -30,6 +31,11 @@ public class AssistantRuntimeHealthService {
             @Value("${classforge.assistant.voice.provider:whisper-cpp}") String voiceProvider) {
         this.groqHealth = groqHealth;
         this.voiceProvider = voiceProvider;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void configureCodex(com.classforge.assistant.codex.CodexCompletionClient codexClient) {
+        this.codexClient = codexClient;
     }
 
     public AssistantRuntimeHealthService(
@@ -65,15 +71,21 @@ public class AssistantRuntimeHealthService {
 
         var groq = groqHealth != null && ("groq".equals(textProvider) || "groq".equals(visionProvider) || "groq".equals(voiceProvider))
                 ? groqHealth.probe() : null;
-        AssistantRuntimeStatus text = "groq".equals(textProvider) && groq != null ? groq.text() : "bedrock".equals(textProvider)
-                ? configuredBedrock("bedrock-text", bedrockTextModel)
-                : runtimeProbe.probe("llama.cpp", llamaUrl);
+        AssistantRuntimeStatus text = switch (textProvider) {
+            case "codex" -> codexStatus("codex-text");
+            case "groq" -> groq.text();
+            case "bedrock" -> configuredBedrock("bedrock-text", bedrockTextModel);
+            default -> runtimeProbe.probe("llama.cpp", llamaUrl);
+        };
 
         AssistantRuntimeStatus whisper = "groq".equals(voiceProvider) && groq != null ? groq.speech() : runtimeProbe.probe("whisper.cpp", whisperUrl);
 
-        AssistantRuntimeStatus vision = "groq".equals(visionProvider) && groq != null ? groq.vision() : "bedrock".equals(visionProvider)
-                ? configuredBedrock("bedrock-vision", bedrockVisionModel)
-                : visionRuntimeProbe.probe(visionUrl, visionModel);
+        AssistantRuntimeStatus vision = switch (visionProvider) {
+            case "codex" -> codexStatus("codex-vision");
+            case "groq" -> groq.vision();
+            case "bedrock" -> configuredBedrock("bedrock-vision", bedrockVisionModel);
+            default -> visionRuntimeProbe.probe(visionUrl, visionModel);
+        };
 
         return new AssistantRuntimeHealthResponse(
                 text.available(),
@@ -84,6 +96,13 @@ public class AssistantRuntimeHealthService {
                 vision,
                 Instant.now()
         );
+    }
+
+    private AssistantRuntimeStatus codexStatus(String component) {
+        return codexClient == null
+                ? new AssistantRuntimeStatus(component, false, "NOT_CONFIGURED", 0,
+                        "Inicia sesión en Codex con ChatGPT en el servidor.")
+                : codexClient.probe(component);
     }
 
     private AssistantRuntimeStatus configuredBedrock(String component, String modelId) {

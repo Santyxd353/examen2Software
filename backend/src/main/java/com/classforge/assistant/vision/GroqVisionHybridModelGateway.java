@@ -32,6 +32,6 @@ public class GroqVisionHybridModelGateway extends LlamaCppVisionHybridModelGatew
 
     @Override
     protected JsonNode requestCompletion(Map<String, Object> payload, String stage) {
-        return GroqVisionCompletion.request(client, payload);
+        return OpenAiVisionCompletion.request(client, payload);
     }
 }

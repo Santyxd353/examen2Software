@@ -1,6 +1,6 @@
 package com.classforge.assistant.vision;
 
-import com.classforge.assistant.groq.GroqClient;
+import com.classforge.assistant.llm.AssistantChatClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -9,8 +9,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Adapts the shared vision pipeline's payload to Groq's OpenAI-compatible contract. */
-final class GroqVisionCompletion {
+/** Adapts the validated vision pipeline to an OpenAI-compatible provider transport. */
+final class OpenAiVisionCompletion {
     private static final List<String> COORDINATES = List.of("x", "y", "width", "height");
     private static final String SEMANTIC_EVIDENCE_INSTRUCTION = """
 
@@ -19,10 +19,10 @@ final class GroqVisionCompletion {
             La geometria se obtiene por separado con OpenCV. Omite cualquier metadato opcional incierto.
             """;
 
-    private GroqVisionCompletion() {
+    private OpenAiVisionCompletion() {
     }
 
-    static JsonNode request(GroqClient client, Map<String, Object> pipelinePayload) {
+    static JsonNode request(AssistantChatClient client, Map<String, Object> pipelinePayload) {
         Map<String, Object> payload = new LinkedHashMap<>(pipelinePayload);
         payload.put("max_completion_tokens", payload.remove("max_tokens"));
         payload.remove("chat_template_kwargs");

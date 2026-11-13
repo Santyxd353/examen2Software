@@ -2,6 +2,16 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { formatAssistantImageError } from './assistant-image-error.utils.ts';
 
+test('shows Codex quota without attributing it to another provider', () => {
+  assert.equal(formatAssistantImageError({ status: 429, error: { error: 'CODEX_RATE_LIMIT', retryAfterSeconds: 12 } }),
+    'Se alcanzó la cuota de Codex. Espera 12 segundos y vuelve a analizar la imagen.');
+});
+
+test('asks to review Codex usage when its reset time is unavailable', () => {
+  assert.equal(formatAssistantImageError({ status: 429, error: { error: 'CODEX_RATE_LIMIT', retryAfterSeconds: 0 } }),
+    'Se alcanzó un límite de Codex. Revisa el uso de tu cuenta antes de reintentar.');
+});
+
 test('shows Groq quota and server retry time instead of blaming the image', () => {
   assert.equal(formatAssistantImageError({ status: 429, error: { error: 'GROQ_RATE_LIMIT', retryAfterSeconds: 19 } }),
     'Se alcanzó la cuota de Groq. Espera 19 segundos y vuelve a analizar la imagen.');

@@ -1,7 +1,8 @@
 # ClassForge en una VM de Azure
 
 Destino elegido por el usuario el10nov2026: **VM Ubuntu24.04 LTS x64**, Java21,
-nginx HTTPS/WSS, systemd y JAR completo con Angular. Groq sigue como única IA.
+nginx HTTPS/WSS, systemd y JAR completo con Angular. El repositorio examen2Software
+usa GPT mediante Codex y Whisper local. Ver [configuración del asistente](assistant-codex.md).
 Despliegue activo: [ClassForge](https://classforge-tiago-15124.eastus.cloudapp.azure.com).
 Se publicó el10nov2026 en una VM Standard_D2als_v7 en East US, con MongoDB Atlas
 Free. La [evidencia del despliegue real](../evidence/parcial2/azure-vm-live.md)
@@ -133,7 +134,9 @@ sudoedit /etc/classforge/classforge.env
 ```
 
 Completar `CLASSFORGE_MONGODB_URI`, un JWT aleatorio mínimo64 caracteres,
-`GROQ_API_KEY` y `CLASSFORGE_WEBSOCKET_ALLOWED_ORIGINS=https://HOSTNAME` exacto.
+`CLASSFORGE_CODEX_EXECUTABLE`, `CLASSFORGE_CODEX_HOME` y
+`CLASSFORGE_WEBSOCKET_ALLOWED_ORIGINS=https://HOSTNAME` exacto. Instalar los
+runtimes y autorizar Codex según [la guía GPT/Codex](assistant-codex.md).
 Usar valores KEY=value sin `export`; no configurar SERVER_PORT. El servicio carga
 `azure,azure-vm` y escucha exclusivamente127.0.0.1:8082.
 
@@ -159,10 +162,10 @@ y crear/invitar al proyecto normalmente.
 
 ## 6. Comprobar la publicación
 
-El lector de imágenes usa una sola consulta visual a Groq, con validación de
+El lector de imágenes usa una sola consulta visual a GPT, con validación de
 evidencia, referencias, revisión y preview antes de Apply. Mantener
 `CLASSFORGE_ASSISTANT_VISION_TWO_PASS=false` y
-`CLASSFORGE_ASSISTANT_VISION_HYBRID=false` con la cuota gratuita: el modo híbrido
+`CLASSFORGE_ASSISTANT_VISION_HYBRID=false` para una sola consulta: el modo híbrido
 realiza consultas adicionales por conector y multiplicidad que pueden agotar
 la cuota aunque la primera lectura sea válida. Puede habilitarse explícitamente
 en entornos con cuota suficiente. Un HTTP429 se muestra con el tiempo de espera

@@ -33,10 +33,16 @@ class GeneratedAssistantRenderingTests {
         assertTrue(configuration.contains("base-url: ${GROQ_BASE_URL:https://api.groq.com/openai/v1}"));
         assertTrue(configuration.contains("text-model: ${GROQ_TEXT_MODEL:openai/gpt-oss-120b}"));
         assertTrue(configuration.contains("speech-model: ${GROQ_SPEECH_MODEL:whisper-large-v3-turbo}"));
+        assertTrue(configuration.contains("provider: ${ASSISTANT_TEXT_PROVIDER:codex}"));
+        assertTrue(configuration.contains("provider: ${ASSISTANT_VOICE_PROVIDER:whisper-cpp}"));
+        assertTrue(configuration.contains("home: ${CODEX_HOME:}"));
+        assertTrue(configuration.contains("model: ${CODEX_MODEL:gpt-6.1-sol}"));
         assertFalse(configuration.contains("LLAMA_"));
-        assertFalse(configuration.contains("WHISPER_URL"));
+        assertTrue(configuration.contains("WHISPER_URL"));
         String readme = text(simple, "README.md");
         assertTrue(readme.contains("GROQ_API_KEY"));
+        assertTrue(readme.contains("CODEX_EXECUTABLE"));
+        assertTrue(readme.contains("CODEX_HOME"));
         assertTrue(readme.contains("429"));
         assertFalse(readme.contains("llama.cpp"));
         for (GeneratedFile file : simple.files()) {

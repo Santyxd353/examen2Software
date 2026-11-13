@@ -2,7 +2,9 @@ package com.classforge.assistant.tools;
 
 import com.classforge.assistant.AssistantPlanningException;
 import com.classforge.assistant.groq.GroqClient;
+import com.classforge.assistant.llm.AssistantChatClient;
 import com.classforge.project.domain.document.ProjectDocument;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -18,12 +20,13 @@ import java.util.Map;
 @Component
 @ConditionalOnProperty(name = "classforge.assistant.text.provider", havingValue = "groq")
 public class GroqToolCallingGateway implements AssistantToolCallingGateway {
-    private final GroqClient client;
+    private final AssistantChatClient client;
     private final JsonMapper mapper;
     private final String model;
     private final int maxTokens;
     private final int maxContextChars;
 
+    @Autowired
     public GroqToolCallingGateway(
             GroqClient client,
             JsonMapper mapper,
@@ -31,8 +34,14 @@ public class GroqToolCallingGateway implements AssistantToolCallingGateway {
             @Value("${classforge.assistant.groq.tool-max-completion-tokens:2048}") int maxTokens,
             @Value("${classforge.assistant.conversation.max-context-chars:18000}") int maxContextChars
     ) {
+        this((AssistantChatClient) client, mapper, model, maxTokens, maxContextChars);
+    }
+
+    /** Shares the closed catalog and native-call validation with compatible provider adapters. */
+    protected GroqToolCallingGateway(AssistantChatClient client, JsonMapper mapper, String model,
+                                     int maxTokens, int maxContextChars) {
         if (model == null || model.isBlank() || maxTokens <= 0 || maxContextChars <= 0) {
-            throw new IllegalArgumentException("Modelo Groq, tokens y límite de contexto deben ser válidos.");
+            throw new IllegalArgumentException("Modelo de IA, tokens y límite de contexto deben ser válidos.");
         }
         this.client = client;
         this.mapper = mapper;
@@ -78,37 +87,37 @@ public class GroqToolCallingGateway implements AssistantToolCallingGateway {
             throw new AssistantPlanningException("El contexto de herramientas UML supera el límite configurado. Reduce la petición o el contexto.");
         }
 
-        // GroqApiException deliberately propagates with status and Retry-After. Do not retry quota failures.
+        // Provider exceptions retain their status and Retry-After. Do not retry quota failures.
         JsonNode envelope = client.chat(payload);
         JsonNode choices = envelope == null ? null : envelope.get("choices");
         JsonNode choice = choices != null && choices.isArray() && !choices.isEmpty() ? choices.get(0) : null;
         if (choice != null && "length".equals(text(choice.get("finish_reason")))) {
-            throw new AssistantPlanningException("Groq devolvió una llamada UML incompleta por límite de tokens.");
+            throw new AssistantPlanningException("El proveedor de IA devolvió una llamada UML incompleta por límite de tokens.");
         }
         JsonNode message = choice == null ? null : choice.get("message");
         JsonNode calls = message == null ? null : message.get("tool_calls");
         if (calls == null || !calls.isArray() || calls.size() != 1) {
-            throw new AssistantPlanningException("Groq debe devolver exactamente una tool_call UML nativa por paso.");
+            throw new AssistantPlanningException("El proveedor de IA debe devolver exactamente una tool_call UML nativa por paso.");
         }
         JsonNode call = calls.get(0);
         JsonNode function = call.get("function");
         if (!"function".equals(text(call.get("type"))) || function == null || !function.isObject() || text(call.get("id")).isBlank()) {
-            throw new AssistantPlanningException("Groq devolvió una tool_call UML inválida.");
+            throw new AssistantPlanningException("El proveedor de IA devolvió una tool_call UML inválida.");
         }
         String wireName = text(function.get("name"));
         AssistantToolDefinition definition = catalog.definitions().stream()
                 .filter(candidate -> candidate.name().wireName().equals(wireName)).findFirst()
-                .orElseThrow(() -> new AssistantPlanningException("Groq intentó utilizar una herramienta UML no expuesta para este paso."));
+                .orElseThrow(() -> new AssistantPlanningException("El proveedor de IA intentó utilizar una herramienta UML no expuesta para este paso."));
         JsonNode arguments = function.get("arguments");
         if (arguments != null && arguments.isString()) {
             try {
                 arguments = mapper.readTree(arguments.asString());
             } catch (Exception malformedArguments) {
-                throw new AssistantPlanningException("Groq devolvió argumentos UML que no son JSON válido.", malformedArguments);
+                throw new AssistantPlanningException("El proveedor de IA devolvió argumentos UML que no son JSON válido.", malformedArguments);
             }
         }
         if (arguments == null || !arguments.isObject()) {
-            throw new AssistantPlanningException("Los argumentos UML de Groq deben ser un objeto JSON.");
+            throw new AssistantPlanningException("Los argumentos UML del proveedor de IA deben ser un objeto JSON.");
         }
         validateArguments(arguments, mapper.valueToTree(definition.parameters()), "arguments");
         return List.of(new AssistantToolInvocation(text(call.get("id")), definition.name(), arguments));
@@ -156,7 +165,7 @@ public class GroqToolCallingGateway implements AssistantToolCallingGateway {
     }
 
     private AssistantPlanningException invalidArguments(String path) {
-        return new AssistantPlanningException("Los argumentos UML de Groq no cumplen el catálogo actual en " + path + ".");
+        return new AssistantPlanningException("Los argumentos UML del proveedor de IA no cumplen el catálogo actual en " + path + ".");
     }
 
     private String text(JsonNode value) { return value != null && value.isString() ? value.asString() : ""; }

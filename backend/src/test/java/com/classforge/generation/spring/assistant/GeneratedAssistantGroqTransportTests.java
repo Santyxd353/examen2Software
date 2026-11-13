@@ -37,9 +37,10 @@ class GeneratedAssistantGroqTransportTests {
         var fixture = new GeneratedAssistantRenderingTests().fixture();
         var project = new SpringProjectRenderer(new SpringFreeMarkerRenderer(), new GeneratedProjectValidator())
                 .render(fixture.model(), SpringBootGenerationOptions.simpleCrud(false, "#7C3AED"));
+        String assistantPath = "src/main/java/" + fixture.model().basePackage().replace('.', '/') + "/assistant/";
         List<Path> sources = new ArrayList<>();
         for (var file : project.files()) {
-            if (!file.path().endsWith(".java") || !file.path().contains("/assistant/GeneratedAssistant")) continue;
+            if (!file.path().endsWith(".java") || !file.path().startsWith(assistantPath)) continue;
             Path target = temp.resolve(file.path());
             Files.createDirectories(target.getParent());
             Files.write(target, file.content());

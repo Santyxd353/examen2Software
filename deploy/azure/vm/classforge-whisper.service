@@ -1,0 +1,41 @@
+[Unit]
+Description=ClassForge local whisper.cpp speech-to-text
+After=network.target
+StartLimitIntervalSec=120
+StartLimitBurst=8
+
+[Service]
+Type=simple
+User=classforge
+Group=classforge
+WorkingDirectory=/opt/classforge/data/whisper
+ExecStart=/usr/bin/python3 -B /opt/classforge/whisper/whisper-local.py
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=5
+KillMode=control-group
+UMask=0077
+Nice=5
+MemoryHigh=768M
+MemoryMax=1G
+TasksMax=48
+LimitNOFILE=128
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=localhost
+InaccessiblePaths=-/etc/classforge -/opt/classforge/codex -/opt/classforge/data/codex -/opt/classforge/data/codex-home
+
+[Install]
+WantedBy=multi-user.target

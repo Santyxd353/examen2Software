@@ -1,5 +1,6 @@
 package com.classforge.assistant.groq;
 
+import com.classforge.assistant.llm.AssistantChatClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
@@ -16,7 +17,7 @@ import java.nio.ByteBuffer;
 
 /** Server-only Groq REST transport. No retries: callers retain request identity and quota control. */
 @Component
-public class GroqClient {
+public class GroqClient implements AssistantChatClient {
     private final JsonMapper json;
     private final URI base;
     private final String apiKey;
@@ -45,6 +46,7 @@ public class GroqClient {
 
     public boolean isConfigured() { return !apiKey.isBlank(); }
 
+    @Override
     public JsonNode chat(Map<String, Object> payload) {
         return execute(request("chat/completions").header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(payload))).build());
